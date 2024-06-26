@@ -16,24 +16,37 @@ const content = `\
   If the user wants anything else unrelated to the function calls \`get_crypto_price\` or \`get_crypto_stats\`, you should chat with the user and answer any questions they may have.
 `;
 
-export const sendMessage = async () => {};
+export const sendMessage = async (
+  message: string
+): Promise<{
+  id: number;
+  role: "user" | "assistant";
+  display: React.ReactNode;
+}> => {
+  return {
+    id: Date.now(),
+    role: "assistant",
+    display: <p>Hello!</p>,
+  };
+};
 
 export type AIState = Array<{
   id?: number;
   name: "get_crypto_price" | "get_crypto_stats";
   role: "user" | "assistant" | "system";
   content: string;
+  toolInvocations?: ToolInvocation;
 }>;
 export type UIState = Array<{
   id: number;
   role: "user" | "assistant";
   display: React.ReactNode;
-  tool_calls: ToolInvocation;
+  tool_calls?: ToolInvocation;
 }>;
 
-export const AI = createAI<AIState, UIState>({
-  initialAIState: [],
-  initialUIState: [],
+export const AI = createAI({
+  initialAIState: [] as AIState,
+  initialUIState: [] as UIState,
   actions: {
     sendMessage,
   },

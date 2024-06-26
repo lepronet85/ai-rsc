@@ -8,8 +8,9 @@ import { type SubmitHandler, useForm } from "react-hook-form";
 import TextareaAutosize from "react-textarea-autosize";
 import { ArrowDownIcon, PlusIcon } from "lucide-react";
 import { z } from "zod";
-import { useUIState } from "ai/rsc";
+import { useActions, useUIState } from "ai/rsc";
 import type { AI } from "./actions";
+import { UserMessage } from "@/components/llm/message";
 
 const chatSchema = z.object({
   message: z.string().min(1, "Message is required."),
@@ -21,18 +22,35 @@ export default function Home() {
   const form = useForm<ChatInput>();
   const { formRef, onKeyDown } = useEnterSubmit();
   const [messages, setMessages] = useUIState<typeof AI>();
+  const { sendMessage } = useActions<typeof AI>();
 
-  const onSubmit: SubmitHandler<ChatInput> = (data) => {
+  const onSubmit: SubmitHandler<ChatInput> = async (data) => {
     const value = data.message.trim();
     formRef.current?.reset();
 
     if (!value) return;
+
+    setMessages((currentMessages) => [
+      ...currentMessages,
+      {
+        id: Date.now(),
+        role: "user",
+        display: <UserMessage>{value}</UserMessage>,
+      },
+    ]);
+
+    try {
+      const responseMessage = await sendMessage(value);
+      setMessages((currentMessages) => [...currentMessages, responseMessage]);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   return (
     <main>
       <div className="pb-[200px] pt-4 md:pt-10">
-        <ChatList messages={[]} />
+        <ChatList messages={messages} />
         <ChatScrollAnchor />
       </div>
       <div className="fixed inset-x-0 bottom-0 w-full bg-gradient-to-b from-muted/30 from-0% to-muted/30 to-50% peer-[[data-state=open]]:group-[]:lg:pl-[250px] peer-[[data-state=open]]:group-[]:xl:pl-[300px]">
