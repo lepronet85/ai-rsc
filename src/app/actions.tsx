@@ -1,7 +1,10 @@
 "use server";
 
-import { createAI } from "ai/rsc";
-import type { ToolInvocation } from "ai";
+import { createAI, getMutableAIState, streamUI } from "ai/rsc";
+import type { CoreMessage, ToolInvocation } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { BotMessage } from "@/components/llm/message";
+import { Loader2 } from "lucide-react";
 
 const content = `\
   You are a crypto bot and you can help users get the prices of cryptocurrencies, and beside that also chat with users.
@@ -23,6 +26,33 @@ export const sendMessage = async (
   role: "user" | "assistant";
   display: React.ReactNode;
 }> => {
+  const history = getMutableAIState<typeof AI>();
+
+  history.update([
+    ...history.get(),
+    {
+      role: "user",
+      content: message,
+    },
+  ]);
+
+  const reply = await streamUI({
+    model: openai("gpt-4o-2024-05-13"),
+    messages: [
+      {
+        role: "system",
+        content,
+        toolInvocations: [],
+      },
+      ...history.get(),
+    ] as CoreMessage[],
+    initial: (
+      <BotMessage className="items-center flex shrink-0">
+        <Loader2 className="w-5 animate-spin stroke-zinc-900" />
+      </BotMessage>
+    ),
+  });
+
   return {
     id: Date.now(),
     role: "assistant",
@@ -32,7 +62,7 @@ export const sendMessage = async (
 
 export type AIState = Array<{
   id?: number;
-  name: "get_crypto_price" | "get_crypto_stats";
+  name?: "get_crypto_price" | "get_crypto_stats";
   role: "user" | "assistant" | "system";
   content: string;
   toolInvocations?: ToolInvocation;
